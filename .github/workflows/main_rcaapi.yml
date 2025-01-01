@@ -27,21 +27,19 @@ jobs:
           echo "AZURE_USERNAME=${{ secrets.AZURE_USERNAME }}" >> ./.env
           echo "AZURE_PASSWORD=${{ secrets.AZURE_PASSWORD }}" >> ./.env
           echo "LLAMA_CLOUD_API_KEY=${{ secrets.LLAMA_CLOUD_API_KEY }}" >> ./.env
-          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> ./.env
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> ./.env
           echo "AWS_REGION=${{ vars.AWS_REGION }}" >> ./.env
           echo "FLASK_SESSION_KEY=${{ secrets.FLASK_SESSION_KEY }}" >> ./.env
           echo "COSMOS_ENDPOINT=${{ vars.COSMOS_ENDPOINT }}" >> ./.env
 
-      - name: Create and start virtual environment
+      - name: Create and activate virtual environment
         run: |
           python -m venv venv
           source venv/bin/activate
 
       - name: Install dependencies
         run: pip install -r requirements.txt
-
-      # Optional: Add step to run tests here (e.g., PyTest)
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
@@ -50,8 +48,8 @@ jobs:
           path: |
             .
             !venv/
-            !*.zip
             !*.tar.gz
+            !*.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -59,17 +57,14 @@ jobs:
     environment:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    
+
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: python-app
 
-      - name: Install Azure CLI
-        uses: azure/cli@v1
-
-      - name: Deploy to Azure Web App
+      - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:

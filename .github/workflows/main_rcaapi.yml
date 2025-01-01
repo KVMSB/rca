@@ -1,4 +1,4 @@
-name: Build and deploy Python app to Azure Web App - rcaapi
+name: Deploy FastAPI to Azure App Service
 
 on:
   push:
@@ -7,16 +7,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Set up Python version
-        uses: actions/setup-python@v5
+      # Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: '3.10'
 
       - name: Create .env file with secrets
         run: |
@@ -33,42 +36,24 @@ jobs:
           echo "FLASK_SESSION_KEY=${{ secrets.FLASK_SESSION_KEY }}" >> ./.env
           echo "COSMOS_ENDPOINT=${{ vars.COSMOS_ENDPOINT }}" >> ./.env
 
-      - name: Create and activate virtual environment
+      # Install dependencies
+      - name: Install dependencies
         run: |
           python -m venv venv
           source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      # Archive the application
+      - name: Archive application
+        run: |
+          zip -r app.zip .
 
-      - name: Upload artifact for deployment jobs
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-app
-          path: |
-            .
-            !venv/
-            !*.tar.gz
-            !*.zip
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: python-app
-
-      - name: 'Deploy to Azure Web App'
-        uses: azure/webapps-deploy@v3
-        id: deploy-to-webapp
+      # Deploy to Azure App Service
+      - name: Deploy to Azure
+        uses: azure/webapps-deploy@v2
         with:
           app-name: 'rcaapi'
-          slot-name: 'Production'
+          slot-name: production
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_C8146096A00E441D8F5B40D1B4D77EFD }}
-          package: '.'
+          package: ./app.zip
